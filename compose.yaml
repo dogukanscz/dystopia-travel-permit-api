@@ -9,10 +9,16 @@ services:
       POSTGRES_DB: dystopia_travel_db
 
     ports:
-      - "5432:5432"
+      - '5433:5432'
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dogukan -d dystopia_travel_db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build: .
@@ -20,10 +26,15 @@ services:
     container_name: dystopia-api
 
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+
+    command: >
+      sh -c "node node_modules/typeorm/cli.js migration:run
+      -d dist/database/data-source.js && node dist/main.js"
 
     ports:
-      - "3000:3000"
+      - '3000:3000'
 
     environment:
       DB_HOST: database
