@@ -174,7 +174,8 @@ Travel Permit:
 
 - POST /travel-permit
 - GET /travel-permit
-- GET /travel-permit/:id/verify
+- GET /travel-permit/:id/qr
+- GET /travel-permit/qr/:qrCode
 
 ## Development Notes
 
@@ -191,7 +192,6 @@ This project was developed as a database-oriented backend challenge. The focus i
 
 Planned improvements for v2:
 
-- QR code image generation
 - Seed data
 - Update and delete endpoints
 - Unit tests

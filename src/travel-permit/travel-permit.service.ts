@@ -11,6 +11,8 @@ import { Vehicle } from '../vehicle/entities/vehicle.entity';
 import { Trailer } from '../trailer/entities/trailer.entity';
 import { ShippingContainer } from '../shipping-container/entities/shipping-container.entity';
 import { Cargo } from '../cargo/entities/cargo.entity';
+import { randomUUID } from 'node:crypto';
+import * as QRCode from 'qrcode';
 
 @Injectable()
 export class TravelPermitService {
@@ -110,14 +112,14 @@ export class TravelPermitService {
       vehicle,
       trailer,
       container,
-      qrCode: permitNumber,
+      qrCode: randomUUID(),
     });
 
     const savedPermit = await this.travelPermitRepository.save(travelPermit);
 
     if (createTravelPermitDto.persons?.length) {
       const permitPersons = await Promise.all(
-        createTravelPermitDto.persons.map(async item => {
+        createTravelPermitDto.persons.map(async (item) => {
           const person = await this.personRepository.findOneBy({
             id: item.personId,
           });
@@ -139,7 +141,7 @@ export class TravelPermitService {
 
     if (createTravelPermitDto.cargoes?.length) {
       const permitCargoes = await Promise.all(
-        createTravelPermitDto.cargoes.map(async item => {
+        createTravelPermitDto.cargoes.map(async (item) => {
           const cargo = await this.cargoRepository.findOneBy({
             id: item.cargoId,
           });
@@ -209,6 +211,7 @@ export class TravelPermitService {
 
     return {
       permitNumber: travelPermit.permitNumber,
+      qrCode: travelPermit.qrCode,
       status: travelPermit.status,
       validity: {
         startsAt: travelPermit.startsAt,
@@ -219,7 +222,7 @@ export class TravelPermitService {
         lastName: travelPermit.owner.lastName,
         nationalId: travelPermit.owner.nationalId,
       },
-      permittedPersons: travelPermit.permittedPersons.map(item => ({
+      permittedPersons: travelPermit.permittedPersons.map((item) => ({
         firstName: item.person.firstName,
         lastName: item.person.lastName,
         nationalId: item.person.nationalId,
@@ -247,7 +250,7 @@ export class TravelPermitService {
             maxCapacityKg: travelPermit.container.maxCapacityKg,
           }
         : null,
-      cargoes: travelPermit.cargoes.map(item => ({
+      cargoes: travelPermit.cargoes.map((item) => ({
         contentName: item.cargo.contentName,
         quantity: item.cargo.quantity,
         unit: item.cargo.unit,
@@ -275,5 +278,39 @@ export class TravelPermitService {
         },
       },
     };
+  }
+  async findOneByQrCode(qrCode: string) {
+    const travelPermit = await this.travelPermitRepository.findOneBy({
+      qrCode,
+    });
+
+    if (!travelPermit) {
+      throw new NotFoundException('Travel permit not found for this QR code');
+    }
+
+    return this.findOneForVerification(travelPermit.id);
+  }
+
+  async generateQrCode(id: string): Promise<string> {
+    const travelPermit = await this.travelPermitRepository.findOneBy({
+      id,
+    });
+
+    if (!travelPermit) {
+      throw new NotFoundException('Travel permit not found');
+    }
+
+    if (!travelPermit.qrCode) {
+      throw new NotFoundException('QR code not found for this travel permit');
+    }
+
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:3000';
+    const verificationUrl = `${baseUrl}/travel-permit/qr/${travelPermit.qrCode}`;
+
+    return QRCode.toString(verificationUrl, {
+      type: 'svg',
+      width: 300,
+      margin: 2,
+    });
   }
 }
