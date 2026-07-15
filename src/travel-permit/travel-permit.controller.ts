@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { TravelPermitService } from './travel-permit.service';
 import { CreateTravelPermitDto } from './dto/create-travel-permit.dto';
 
@@ -15,8 +23,13 @@ export class TravelPermitController {
   findAll() {
     return this.travelPermitService.findAll();
   }
-  @Get(':id/verify')
-  verify(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.travelPermitService.findOneForVerification(id);
+  @Get('qr/:qrCode')
+  verifyByQrCode(@Param('qrCode', new ParseUUIDPipe()) qrCode: string) {
+    return this.travelPermitService.findOneByQrCode(qrCode);
+  }
+  @Get(':id/qr')
+  @Header('Content-Type', 'image/svg+xml')
+  generateQrCode(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.travelPermitService.generateQrCode(id);
   }
 }
