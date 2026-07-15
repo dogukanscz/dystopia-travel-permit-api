@@ -1,0 +1,47 @@
+services:
+  database:
+    image: postgres:17-alpine
+    container_name: dystopia-postgres
+
+    environment:
+      POSTGRES_USER: dogukan
+      POSTGRES_PASSWORD: docker123
+      POSTGRES_DB: dystopia_travel_db
+
+    ports:
+      - '5433:5432'
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dogukan -d dystopia_travel_db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+
+    container_name: dystopia-api
+
+    depends_on:
+      database:
+        condition: service_healthy
+
+    command: >
+      sh -c "node node_modules/typeorm/cli.js migration:run
+      -d dist/database/data-source.js && node dist/main.js"
+
+    ports:
+      - '3000:3000'
+
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USERNAME: dogukan
+      DB_PASSWORD: docker123
+      DB_NAME: dystopia_travel_db
+
+volumes:
+  postgres_data:
